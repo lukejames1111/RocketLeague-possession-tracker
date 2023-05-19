@@ -5,42 +5,86 @@
 BAKKESMOD_PLUGIN(rocketLeaguePossessionTracker, "See who has more possession of the ball", plugin_version, PLUGINTYPE_FREEPLAY)
 
 std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
+std::map<std::string, int> playerTouches;
+std::map<int, int> teamTouches;
 
 void rocketLeaguePossessionTracker::onLoad()
 {
-	_globalCvarManager = cvarManager;
-	//cvarManager->log("Plugin loaded!");
+    _globalCvarManager = cvarManager;
+    cvarManager->log("Luke here lol!");
 
-	//cvarManager->registerNotifier("my_aweseome_notifier", [&](std::vector<std::string> args) {
-	//	cvarManager->log("Hello notifier!");
-	//}, "", 0);
+    // Hook to ball touch event
+    gameWrapper->HookEventWithCaller<CarWrapper>("Function TAGame.Car_TA.EventHitBall", std::bind(&rocketLeaguePossessionTracker::onBallTouch, this, std::placeholders::_1, std::placeholders::_2));
+}
 
-	//auto cvar = cvarManager->registerCvar("template_cvar", "hello-cvar", "just a example of a cvar");
-	//auto cvar2 = cvarManager->registerCvar("template_cvar2", "0", "just a example of a cvar with more settings", true, true, -10, true, 10 );
+void rocketLeaguePossessionTracker::onBallTouch(CarWrapper car, void* params)
+{
+    gameWrapper->RegisterDrawable(std::bind(&rocketLeaguePossessionTracker::Render, this, std::placeholders::_1));
 
-	//cvar.addOnValueChanged([this](std::string cvarName, CVarWrapper newCvar) {
-	//	cvarManager->log("the cvar with name: " + cvarName + " changed");
-	//	cvarManager->log("the new value is:" + newCvar.getStringValue());
-	//});
+    // Get the player's name and team
+    auto pri = car.GetPRI();
+    if (pri.IsNull())
+        return;
 
-	//cvar2.addOnValueChanged(std::bind(&rocketLeaguePossessionTracker::YourPluginMethod, this, _1, _2));
+    std::string playerName = pri.GetPlayerName().ToString();
+    int teamNum = pri.GetTeamNum();
 
-	// enabled decleared in the header
-	//enabled = std::make_shared<bool>(false);
-	//cvarManager->registerCvar("TEMPLATE_Enabled", "0", "Enable the TEMPLATE plugin", true, true, 0, true, 1).bindTo(enabled);
+    // Increment player's touch count
+    if (playerTouches.count(playerName) == 0)
+        playerTouches[playerName] = 0;
+    playerTouches[playerName]++;
 
-	//cvarManager->registerNotifier("NOTIFIER", [this](std::vector<std::string> params){FUNCTION();}, "DESCRIPTION", PERMISSION_ALL);
-	//cvarManager->registerCvar("CVAR", "DEFAULTVALUE", "DESCRIPTION", true, true, MINVAL, true, MAXVAL);//.bindTo(CVARVARIABLE);
-	//gameWrapper->HookEvent("FUNCTIONNAME", std::bind(&TEMPLATE::FUNCTION, this));
-	//gameWrapper->HookEventWithCallerPost<ActorWrapper>("FUNCTIONNAME", std::bind(&rocketLeaguePossessionTracker::FUNCTION, this, _1, _2, _3));
-	//gameWrapper->RegisterDrawable(bind(&TEMPLATE::Render, this, std::placeholders::_1));
+    // Increment team's touch count
+    if (teamTouches.count(teamNum) == 0)
+        teamTouches[teamNum] = 0;
+    teamTouches[teamNum]++;
 
+    int totalTouches = teamTouches[0] + teamTouches[1];
 
-	//gameWrapper->HookEvent("Function TAGame.Ball_TA.Explode", [this](std::string eventName) {
-	//	cvarManager->log("Your hook got called and the ball went POOF");
-	//});
-	// You could also use std::bind here
-	//gameWrapper->HookEvent("Function TAGame.Ball_TA.Explode", std::bind(&rocketLeaguePossessionTracker::YourPluginMethod, this);
+    std::string logMessage = "Blue Touches: " + std::to_string(teamTouches[0]) + ", Orange Touches: " + std::to_string(teamTouches[1]) + ", Total Touches: " + std::to_string(totalTouches);
+    cvarManager->log(logMessage);
+}
+
+void rocketLeaguePossessionTracker::Render(CanvasWrapper canvas)
+{
+    // Draw the bar only if game is active
+    if (gameWrapper->IsInGame())
+    {
+        // Calculate total touches and each team's percentage
+        int totalTouches = 0;
+        for (const auto& team : teamTouches)
+            totalTouches += team.second;
+
+        // Draw touch count for each player and team
+        // You need to position these texts at the desired location and style them as you prefer
+        for (const auto& player : playerTouches)
+            canvas.DrawString(player.first + ": " + std::to_string(player.second));
+
+        for (const auto& team : teamTouches)
+            canvas.DrawString("Team " + std::to_string(team.first) + ": " + std::to_string((team.second / (float)totalTouches) * 100.0f) + "%");
+
+        // Draw the bar
+        // You need to position and style this as you prefer
+        int barHeight = 20;
+        int barWidth = canvas.GetSize().X * 0.25; // 25% of screen width
+        int totalTouches = teamTouches[0] + teamTouches[1];
+        int blueWidth = (teamTouches[0] / (float)totalTouches) * barWidth;
+        int orangeWidth = barWidth - blueWidth;
+
+        // Log the calculated values to the console
+        std::string logMessage = "Blue Width: " + std::to_string(blueWidth) + ", Orange Width: " + std::to_string(orangeWidth);
+        cvarManager->log(logMessage);
+
+        // Draw blue part
+        canvas.SetColor(0, 0, 255, 255);
+        canvas.FillTriangle(Vector2{ barStartX, barStartY }, Vector2{ barStartX + blueWidth, barStartY }, Vector2{ barStartX, barStartY + barHeight });
+        canvas.FillTriangle(Vector2{ barStartX + blueWidth, barStartY }, Vector2{ barStartX, barStartY + barHeight }, Vector2{ barStartX + blueWidth, barStartY + barHeight });
+
+        // Draw orange part
+        canvas.SetColor(255, 140, 0, 255);
+        canvas.FillTriangle(Vector2{ barStartX + blueWidth, barStartY }, Vector2{ barStartX + barWidth, barStartY }, Vector2{ barStartX + blueWidth, barStartY + barHeight });
+        canvas.FillTriangle(Vector2{ barStartX + barWidth, barStartY }, Vector2{ barStartX + blueWidth, barStartY + barHeight }, Vector2{ barStartX + barWidth, barStartY + barHeight });
+    }
 }
 
 void rocketLeaguePossessionTracker::onUnload()

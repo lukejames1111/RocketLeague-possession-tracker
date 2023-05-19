@@ -16,6 +16,9 @@ class rocketLeaguePossessionTracker: public BakkesMod::Plugin::BakkesModPlugin/*
 	//Boilerplate
 	virtual void onLoad();
 	virtual void onUnload();
+	void onBallTouch(CarWrapper car, void* params);
+	void Render(CanvasWrapper canvas);
+
 
 	// Inherited via PluginSettingsWindow
 	/*
