@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "rocketLeaguePossessionTracker.h"
+#include <cmath>
 
 
 BAKKESMOD_PLUGIN(rocketLeaguePossessionTracker, "See who has more possession of the ball", plugin_version, PLUGINTYPE_FREEPLAY)
@@ -15,12 +16,12 @@ void rocketLeaguePossessionTracker::onLoad()
 
     // Hook to ball touch event
     gameWrapper->HookEventWithCaller<CarWrapper>("Function TAGame.Car_TA.EventHitBall", std::bind(&rocketLeaguePossessionTracker::onBallTouch, this, std::placeholders::_1, std::placeholders::_2));
+
+    gameWrapper->RegisterDrawable(std::bind(&rocketLeaguePossessionTracker::Render, this, std::placeholders::_1));
 }
 
 void rocketLeaguePossessionTracker::onBallTouch(CarWrapper car, void* params)
 {
-    gameWrapper->RegisterDrawable(std::bind(&rocketLeaguePossessionTracker::Render, this, std::placeholders::_1));
-
     // Get the player's name and team
     auto pri = car.GetPRI();
     if (pri.IsNull())
@@ -47,45 +48,35 @@ void rocketLeaguePossessionTracker::onBallTouch(CarWrapper car, void* params)
 
 void rocketLeaguePossessionTracker::Render(CanvasWrapper canvas)
 {
-    // Draw the bar only if game is active
-    if (gameWrapper->IsInGame())
-    {
-        // Calculate total touches and each team's percentage
-        int totalTouches = 0;
-        for (const auto& team : teamTouches)
-            totalTouches += team.second;
+    // Set the color to white
+    canvas.SetColor(LinearColor{ 255, 255, 255, 255 });
+    canvas.SetPosition(Vector2{ 50, 50 });
+    canvas.DrawString("Touches");
 
-        // Draw touch count for each player and team
-        // You need to position these texts at the desired location and style them as you prefer
-        for (const auto& player : playerTouches)
-            canvas.DrawString(player.first + ": " + std::to_string(player.second));
+    // Draw touch count for each player
+    int yPosition = 70; // Starting position for y
+    for (const auto& player : playerTouches) {
+        canvas.SetPosition(Vector2{ 50, yPosition });
+        canvas.DrawString(player.first + ": " + std::to_string(player.second));
+        yPosition += 20; // Increase y for next string
+    }
 
-        for (const auto& team : teamTouches)
-            canvas.DrawString("Team " + std::to_string(team.first) + ": " + std::to_string((team.second / (float)totalTouches) * 100.0f) + "%");
+    // Calculate total touches
+    int totalTouches = 0;
+    for (const auto& touch : playerTouches) {
+        totalTouches += touch.second;
+    }
 
-        // Draw the bar
-        // You need to position and style this as you prefer
-        int barHeight = 20;
-        int barWidth = canvas.GetSize().X * 0.25; // 25% of screen width
-        int totalTouches = teamTouches[0] + teamTouches[1];
-        int blueWidth = (teamTouches[0] / (float)totalTouches) * barWidth;
-        int orangeWidth = barWidth - blueWidth;
-
-        // Log the calculated values to the console
-        std::string logMessage = "Blue Width: " + std::to_string(blueWidth) + ", Orange Width: " + std::to_string(orangeWidth);
-        cvarManager->log(logMessage);
-
-        // Draw blue part
-        canvas.SetColor(0, 0, 255, 255);
-        canvas.FillTriangle(Vector2{ barStartX, barStartY }, Vector2{ barStartX + blueWidth, barStartY }, Vector2{ barStartX, barStartY + barHeight });
-        canvas.FillTriangle(Vector2{ barStartX + blueWidth, barStartY }, Vector2{ barStartX, barStartY + barHeight }, Vector2{ barStartX + blueWidth, barStartY + barHeight });
-
-        // Draw orange part
-        canvas.SetColor(255, 140, 0, 255);
-        canvas.FillTriangle(Vector2{ barStartX + blueWidth, barStartY }, Vector2{ barStartX + barWidth, barStartY }, Vector2{ barStartX + blueWidth, barStartY + barHeight });
-        canvas.FillTriangle(Vector2{ barStartX + barWidth, barStartY }, Vector2{ barStartX + blueWidth, barStartY + barHeight }, Vector2{ barStartX + barWidth, barStartY + barHeight });
+    // Calculate and draw touch count for each team
+    for (const auto& team : teamTouches) {
+        canvas.SetPosition(Vector2{ 50, yPosition });
+        int teamTouchesPercentage = (team.second / static_cast<float>(totalTouches)) * 100.0f;
+        canvas.DrawString("Team " + std::to_string(team.first) + " touches: " + std::to_string(team.second) + " (" + std::to_string(teamTouchesPercentage) + "%)");
+        yPosition += 20; // Increase y for next string
     }
 }
+
+
 
 void rocketLeaguePossessionTracker::onUnload()
 {

@@ -7,42 +7,13 @@
 #include "version.h"
 constexpr auto plugin_version = stringify(VERSION_MAJOR) "." stringify(VERSION_MINOR) "." stringify(VERSION_PATCH) "." stringify(VERSION_BUILD);
 
-
-class rocketLeaguePossessionTracker: public BakkesMod::Plugin::BakkesModPlugin/*, public BakkesMod::Plugin::PluginSettingsWindow*//*, public BakkesMod::Plugin::PluginWindow*/
+class rocketLeaguePossessionTracker : public BakkesMod::Plugin::BakkesModPlugin
 {
+    int totalTouches;  // Add this line to declare totalTouches as a member variable
 
-	//std::shared_ptr<bool> enabled;
-
-	//Boilerplate
-	virtual void onLoad();
-	virtual void onUnload();
-	void onBallTouch(CarWrapper car, void* params);
-	void Render(CanvasWrapper canvas);
-
-
-	// Inherited via PluginSettingsWindow
-	/*
-	void RenderSettings() override;
-	std::string GetPluginName() override;
-	void SetImGuiContext(uintptr_t ctx) override;
-	*/
-
-	// Inherited via PluginWindow
-	/*
-
-	bool isWindowOpen_ = false;
-	bool isMinimized_ = false;
-	std::string menuTitle_ = "rocketLeaguePossessionTracker";
-
-	virtual void Render() override;
-	virtual std::string GetMenuName() override;
-	virtual std::string GetMenuTitle() override;
-	virtual void SetImGuiContext(uintptr_t ctx) override;
-	virtual bool ShouldBlockInput() override;
-	virtual bool IsActiveOverlay() override;
-	virtual void OnOpen() override;
-	virtual void OnClose() override;
-	
-	*/
+    //Boilerplate
+    virtual void onLoad();
+    virtual void onUnload();
+    void onBallTouch(CarWrapper car, void* params);
+    void Render(CanvasWrapper canvas);
 };
-
