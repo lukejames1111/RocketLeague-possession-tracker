@@ -16,7 +16,7 @@ Before making significant changes, please open an issue to discuss the proposed 
 
 ## License
 
-This plugin is licensed under the [insert license name here]. See the [LICENSE](LICENSE) file for more information.
+This project is licensed under the [MIT License](LICENSE). See the [LICENSE](LICENSE) file for more information.
 
 ## Acknowledgements
 
